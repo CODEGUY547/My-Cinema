@@ -1,16 +1,5 @@
-const demoMovies = [
-  { id: "demo-1", title: "The Last Matatu", year: 2025, genre: "Drama", runtime: "1h 48m", theme: 0, progress: 64, source: "demo" },
-  { id: "demo-2", title: "Kampala After Dark", year: 2024, genre: "Action", runtime: "2h 06m", theme: 1, progress: 31, source: "demo" },
-  { id: "demo-3", title: "Sunday at the Lake", year: 2026, genre: "Comedy", runtime: "1h 32m", theme: 2, source: "demo" },
-  { id: "demo-4", title: "The Green Hills", year: 2023, genre: "Drama", runtime: "1h 57m", theme: 3, source: "demo" },
-  { id: "demo-5", title: "Midnight Frequency", year: 2025, genre: "Action", runtime: "1h 44m", theme: 4, source: "demo" },
-  { id: "demo-6", title: "Home Again", year: 2026, genre: "Comedy", runtime: "1h 39m", theme: 5, source: "demo" },
-  { id: "demo-7", title: "The Quiet Road", year: 2022, genre: "Drama", runtime: "2h 12m", theme: 1, source: "demo" },
-  { id: "demo-8", title: "Red Dust", year: 2024, genre: "Action", runtime: "1h 51m", theme: 0, source: "demo" }
-];
-
 const state = {
-  movies: [...demoMovies],
+  movies: [],
   view: "home",
   filter: "all",
   query: "",
