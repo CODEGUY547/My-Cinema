@@ -28,6 +28,7 @@ const emptyState = $("#emptyState");
 const settingsDialog = $("#settingsDialog");
 const playerDialog = $("#playerDialog");
 const videoPlayer = $("#videoPlayer");
+const tmdbStatus = $("#tmdbStatus");
 
 function escapeHtml(value = "") {
   return value.replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
@@ -52,6 +53,61 @@ function cleanJellyfinTitle(title = "") {
 
 function posterTheme(title = "") {
   return [...title].reduce((total, char) => total + char.charCodeAt(0), 0) % 6;
+}
+
+async function tmdbIsReady() {
+  try {
+    const response = await fetch("/api/tmdb/status", { cache: "no-store" });
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+async function enrichMovieFromTmdb(movie) {
+  const params = new URLSearchParams();
+  if (movie.providerIds?.Tmdb) params.set("tmdbId", movie.providerIds.Tmdb);
+  else {
+    params.set("title", movie.title);
+    if (Number(movie.year)) params.set("year", movie.year);
+  }
+  const response = await fetch(`/api/tmdb/movie?${params}`);
+  if (!response.ok) return movie;
+  const metadata = await response.json();
+  return {
+    ...movie,
+    title: metadata.title || movie.title,
+    year: metadata.year || movie.year,
+    genre: metadata.genre || movie.genre,
+    genres: metadata.genres || [],
+    overview: metadata.overview || movie.overview || "",
+    rating: metadata.rating,
+    image: metadata.poster || movie.image,
+    backdrop: metadata.backdrop || "",
+    tmdbId: metadata.tmdbId,
+    tmdbUrl: metadata.tmdbUrl,
+    metadataSource: "tmdb"
+  };
+}
+
+async function enrichJellyfinMovies(movies) {
+  const ready = await tmdbIsReady();
+  tmdbStatus.textContent = ready ? "TMDB connected" : "TMDB setup needed";
+  tmdbStatus.classList.toggle("connected", ready);
+  if (!ready || !movies.length) return;
+  let updatedCount = 0;
+  for (let start = 0; start < movies.length; start += 4) {
+    const batch = movies.slice(start, start + 4);
+    const enriched = await Promise.all(batch.map(movie => enrichMovieFromTmdb(movie).catch(() => movie)));
+    const byId = new Map(enriched.map(movie => [movie.id, movie]));
+    updatedCount += enriched.filter(movie => movie.metadataSource === "tmdb").length;
+    state.movies = state.movies.map(movie => byId.get(movie.id) || movie);
+    renderContinue();
+    renderMovies();
+  }
+  tmdbStatus.textContent = `TMDB updated ${updatedCount} movie${updatedCount === 1 ? "" : "s"}`;
 }
 
 function posterMarkup(movie, index) {
@@ -83,7 +139,8 @@ function renderMovies() {
       </div>
       <div class="movie-info">
         <h3 title="${escapeHtml(movie.title)}">${escapeHtml(movie.title)}</h3>
-        <p>${escapeHtml(String(movie.year || "Movie"))} · ${escapeHtml(movie.genre || "Unsorted")} · ${escapeHtml(movie.runtime || "")}</p>
+        <p>${escapeHtml(String(movie.year || "Movie"))} · ${escapeHtml(movie.genre || "Unsorted")} · ${escapeHtml(movie.runtime || "")}${movie.rating ? ` · ★ ${escapeHtml(String(movie.rating))}` : ""}</p>
+        ${movie.overview ? `<p class="movie-blurb" title="${escapeHtml(movie.overview)}">${escapeHtml(movie.overview)}</p>` : ""}
       </div>
     </article>`).join("");
   emptyState.hidden = movies.length > 0;
@@ -234,7 +291,7 @@ async function loadJellyfinLibrary() {
   const params = new URLSearchParams({
     Recursive: "true",
     IncludeItemTypes: "Movie",
-    Fields: "Overview,Genres,RunTimeTicks,PrimaryImageAspectRatio,UserData",
+    Fields: "Overview,Genres,RunTimeTicks,PrimaryImageAspectRatio,ProviderIds,UserData",
     SortBy: "SortName",
     SortOrder: "Ascending"
   });
@@ -249,6 +306,8 @@ async function loadJellyfinLibrary() {
     title: cleanJellyfinTitle(item.Name),
     year: item.ProductionYear || "Movie",
     genre: item.Genres?.[0] || "Unsorted",
+    overview: item.Overview || "",
+    providerIds: item.ProviderIds || {},
     runtime: ticksToRuntime(item.RunTimeTicks),
     theme: posterTheme(item.Name),
     source: "jellyfin",
@@ -262,6 +321,9 @@ async function loadJellyfinLibrary() {
   state.view = "library";
   renderContinue();
   updateView();
+  enrichJellyfinMovies(jellyfinMovies).catch(() => {
+    tmdbStatus.textContent = "TMDB temporarily unavailable";
+  });
 }
 
 function disconnectJellyfin() {
@@ -336,3 +398,7 @@ try {
 
 renderContinue();
 renderMovies();
+tmdbIsReady().then(ready => {
+  tmdbStatus.textContent = ready ? "TMDB connected" : "TMDB setup needed";
+  tmdbStatus.classList.toggle("connected", ready);
+});

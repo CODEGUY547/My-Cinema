@@ -101,6 +101,15 @@ main { min-width: 0; }
 .movie-info { padding: 13px 3px 0; }
 .movie-info h3 { margin: 0 0 6px; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
 .movie-info p { margin: 0; color: #858892; font-size: 12px; }
+.movie-info .movie-blurb { margin-top: 8px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.tmdb-credit { margin: 56px 42px 34px; padding: 18px 20px; display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 16px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.tmdb-credit a { display: grid; place-items: center; }
+.tmdb-credit img { width: 44px; height: 44px; object-fit: contain; }
+.tmdb-credit strong { color: #d9dbe0; font-size: 12px; }
+.tmdb-credit p { margin: 4px 0 0; font-size: 10px; line-height: 1.4; }
+.metadata-status { padding: 7px 10px; color: #b7bac3; background: #23262d; border-radius: 99px; font-size: 10px; white-space: nowrap; }
+.metadata-status.connected { color: #0b2012; background: #90cea1; }
 
 .continue-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
 .continue-card { min-height: 145px; display: grid; grid-template-columns: 190px 1fr; overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
@@ -153,6 +162,8 @@ main { min-width: 0; }
   .hero-content { padding: 42px 34px; }
   .hero-art { display: none; }
   .content-section { padding: 38px 20px 4px; }
+  .tmdb-credit { margin: 46px 20px 28px; grid-template-columns: 46px 1fr; }
+  .metadata-status { grid-column: 1 / -1; justify-self: start; }
   .movie-grid { grid-template-columns: repeat(3,minmax(120px,1fr)); }
   .continue-grid { grid-template-columns: 1fr; }
 }
@@ -164,5 +175,6 @@ main { min-width: 0; }
   .movie-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px 12px; }
   .continue-card { grid-template-columns: 120px 1fr; }.continue-copy { padding: 17px; }
   .field-pair { grid-template-columns: 1fr; gap: 0; }
+  .tmdb-credit { padding: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition: none !important; } }
