@@ -23,6 +23,17 @@ My Cinema can securely enrich Jellyfin movies with current TMDB titles, years, g
 
 The token is read only by the local Node server and is never sent to the browser or committed to Git. When Jellyfin provides a TMDB ID, My Cinema uses that exact record; otherwise it searches using the cleaned title and release year.
 
+## Deploy on Vercel
+
+The `dist` folder is the static site and `api/tmdb` contains the Vercel Functions used for automatic movie metadata.
+
+1. Import `CODEGUY547/My-Cinema` into Vercel.
+2. Set the Output Directory to `dist`.
+3. Add `TMDB_READ_ACCESS_TOKEN` as a Secret environment variable for Production and Preview.
+4. Deploy.
+
+For remote playback, connect the viewing device and the Jellyfin PC to the same Tailscale network. Use Tailscale Serve to give Jellyfin a private HTTPS address; do not expose port 8096 directly to the public internet.
+
 ## Jellyfin connection
 
 Open **Jellyfin** in the sidebar and enter your server URL and account. The password is used only for authentication. The returned session token stays in `sessionStorage` and is removed when the browser session ends.
