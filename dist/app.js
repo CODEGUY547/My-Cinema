@@ -167,6 +167,16 @@ function normalizeServerUrl(url) {
   return url.trim().replace(/\/+$/, "");
 }
 
+function jellyfinAuthorization(token = "") {
+  return [
+    'MediaBrowser Client="My%20Cinema"',
+    'Device="Web%20browser"',
+    `DeviceId="${encodeURIComponent(deviceId())}"`,
+    'Version="1.0.0"',
+    `Token="${encodeURIComponent(token)}"`
+  ].join(", ");
+}
+
 async function connectJellyfin(event) {
   event.preventDefault();
   const status = $("#connectionStatus");
@@ -180,7 +190,7 @@ async function connectJellyfin(event) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `MediaBrowser Client="My Cinema", Device="Web browser", DeviceId="${deviceId()}", Version="1.0.0"`
+        "Authorization": jellyfinAuthorization()
       },
       body: JSON.stringify({ Username: $("#username").value, Pw: $("#password").value })
     });
@@ -211,7 +221,9 @@ async function loadJellyfinLibrary() {
     SortBy: "SortName",
     SortOrder: "Ascending"
   });
-  const response = await fetch(`${baseUrl}/Users/${userId}/Items?${params}`, { headers: { "X-Emby-Token": token } });
+  const response = await fetch(`${baseUrl}/Users/${userId}/Items?${params}`, {
+    headers: { "Authorization": jellyfinAuthorization(token) }
+  });
   if (!response.ok) throw new Error("Could not load the Jellyfin library.");
   const data = await response.json();
   const jellyfinMovies = (data.Items || []).map((item, index) => ({
@@ -224,8 +236,8 @@ async function loadJellyfinLibrary() {
     theme: index % 6,
     source: "jellyfin",
     progress: item.UserData?.PlayedPercentage ? Math.round(item.UserData.PlayedPercentage) : 0,
-    image: item.ImageTags?.Primary ? `${baseUrl}/Items/${item.Id}/Images/Primary?maxWidth=600&quality=88&tag=${encodeURIComponent(item.ImageTags.Primary)}&api_key=${encodeURIComponent(token)}` : "",
-    videoUrl: `${baseUrl}/Videos/${item.Id}/stream?Static=true&api_key=${encodeURIComponent(token)}`
+    image: item.ImageTags?.Primary ? `${baseUrl}/Items/${item.Id}/Images/Primary?maxWidth=600&quality=88&tag=${encodeURIComponent(item.ImageTags.Primary)}&ApiKey=${encodeURIComponent(token)}` : "",
+    videoUrl: `${baseUrl}/Videos/${item.Id}/stream?Static=true&ApiKey=${encodeURIComponent(token)}`
   }));
   state.movies = [...jellyfinMovies, ...state.movies.filter(movie => movie.source !== "jellyfin")];
   state.view = "library";
