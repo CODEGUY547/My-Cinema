@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b0f">
+  <meta name="description" content="A private, local-first movie library with optional Jellyfin connection.">
+  <title>My Cinema</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <a class="brand" href="#" aria-label="My Cinema home">
+        <span class="brand-mark" aria-hidden="true">M</span>
+        <span>MY CINEMA</span>
+      </a>
+
+      <nav class="nav-list">
+        <button class="nav-item active" data-view="home"><span aria-hidden="true">⌂</span> Home</button>
+        <button class="nav-item" data-view="library"><span aria-hidden="true">▦</span> My library</button>
+        <button class="nav-item" data-view="favorites"><span aria-hidden="true">♡</span> Favorites</button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="nav-item" id="settingsButton"><span aria-hidden="true">⚙</span> Jellyfin</button>
+        <div class="privacy-pill"><span></span> Private library</div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">☰</button>
+        <label class="search">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="Search your movies" autocomplete="off">
+        </label>
+        <div class="top-actions">
+          <button class="ghost-button" id="addFilesButton">＋ Add local movies</button>
+          <input id="fileInput" type="file" accept="video/*" multiple hidden>
+          <button class="avatar" id="avatarButton" aria-label="Open Jellyfin settings">BM</button>
+        </div>
+      </header>
+
+      <section class="hero" aria-labelledby="heroTitle">
+        <div class="hero-noise"></div>
+        <div class="hero-content">
+          <p class="eyebrow">YOUR PRIVATE SCREENING ROOM</p>
+          <h1 id="heroTitle">Your movies.<br><em>Your space.</em></h1>
+          <p>Bring your own licensed files or connect your Jellyfin server. Everything stays under your control.</p>
+          <div class="hero-actions">
+            <button class="primary-button" id="heroAddButton"><span aria-hidden="true">▶</span> Add your first movie</button>
+            <button class="secondary-button" id="heroConnectButton">Connect Jellyfin</button>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="film-orbit orbit-one"></div>
+          <div class="film-orbit orbit-two"></div>
+          <div class="ticket">
+            <span>PRIVATE PREMIERE</span>
+            <strong>MY<br>CINEMA</strong>
+            <small>ADMIT ONE</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section" id="continueSection">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">PICK UP WHERE YOU LEFT OFF</p>
+            <h2>Continue watching</h2>
+          </div>
+        </div>
+        <div class="continue-grid" id="continueGrid"></div>
+      </section>
+
+      <section class="content-section">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker" id="libraryKicker">CURATED FOR YOU</p>
+            <h2 id="libraryTitle">Your library</h2>
+          </div>
+          <div class="filter-row" role="group" aria-label="Filter movies">
+            <button class="filter active" data-filter="all">All</button>
+            <button class="filter" data-filter="Drama">Drama</button>
+            <button class="filter" data-filter="Action">Action</button>
+            <button class="filter" data-filter="Comedy">Comedy</button>
+          </div>
+        </div>
+        <div class="movie-grid" id="movieGrid"></div>
+        <div class="empty-state" id="emptyState" hidden>
+          <div>◌</div>
+          <h3>No movies found</h3>
+          <p>Try another search, add local video files, or connect Jellyfin.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-layer settings-dialog" id="settingsDialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+    <form class="dialog-card" id="jellyfinForm">
+      <div class="dialog-top">
+        <div>
+          <p class="section-kicker">OPTIONAL CONNECTION</p>
+          <h2 id="settingsTitle">Connect Jellyfin</h2>
+        </div>
+        <button class="close-button" id="settingsClose" type="button" aria-label="Close">×</button>
+      </div>
+      <p class="dialog-copy">Connect directly to your own Jellyfin server. Your password is used only to sign in and is never stored.</p>
+      <label>Server address
+        <input id="serverUrl" type="url" placeholder="https://media.example.com" required>
+      </label>
+      <div class="field-pair">
+        <label>Username
+          <input id="username" autocomplete="username" required>
+        </label>
+        <label>Password
+          <input id="password" type="password" autocomplete="current-password" required>
+        </label>
+      </div>
+      <div class="connection-note">
+        <span aria-hidden="true">⌁</span>
+        <p>For a hosted page, your Jellyfin server must use HTTPS and allow this site as an origin. Local HTTP works when this page is served locally.</p>
+      </div>
+      <p class="form-status" id="connectionStatus" role="status"></p>
+      <div class="dialog-actions">
+        <button type="button" class="text-button" id="disconnectButton">Disconnect</button>
+        <button type="submit" class="primary-button" id="connectButton">Connect library</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-layer player-dialog" id="playerDialog" role="dialog" aria-modal="true" aria-labelledby="playerTitle" hidden>
+    <div class="player-shell">
+      <button class="player-close" id="playerClose" aria-label="Close player">×</button>
+      <video id="videoPlayer" controls playsinline></video>
+      <div class="player-meta">
+        <p class="section-kicker" id="playerSource">MY LIBRARY</p>
+        <h2 id="playerTitle">Movie title</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
