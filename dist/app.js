@@ -41,9 +41,26 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove("show"), 2600);
 }
 
+function cleanJellyfinTitle(title = "") {
+  return title
+    .replace(/\[(?:https?:\/\/)?(?:www\.)?[^\]]+\]/gi, "")
+    .replace(/[._]+/g, " ")
+    .replace(/\s+(?:VJ\s+)?Junior\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim() || "Untitled movie";
+}
+
+function posterTheme(title = "") {
+  return [...title].reduce((total, char) => total + char.charCodeAt(0), 0) % 6;
+}
+
 function posterMarkup(movie, index) {
   if (movie.image) return `<img class="poster-image" src="${escapeHtml(movie.image)}" alt="">`;
-  return `<div class="poster-art theme-${movie.theme ?? index % 6}" data-letter="${escapeHtml(movie.title.charAt(0))}"><span class="poster-word">${escapeHtml(movie.title)}</span></div>`;
+  return `<div class="poster-art theme-${movie.theme ?? posterTheme(movie.title) ?? index % 6}" data-letter="${escapeHtml(movie.title.charAt(0))}">
+    <span class="poster-edition">MY CINEMA · ${movie.source === "jellyfin" ? "JELLYFIN" : "PRIVATE LIBRARY"}</span>
+    <span class="poster-word">${escapeHtml(movie.title)}</span>
+    <span class="poster-credit">${escapeHtml(movie.genre || "MOVIE")} · ${escapeHtml(String(movie.year || "FEATURE"))}</span>
+  </div>`;
 }
 
 function filteredMovies() {
@@ -229,14 +246,16 @@ async function loadJellyfinLibrary() {
   const jellyfinMovies = (data.Items || []).map((item, index) => ({
     id: `jf-${item.Id}`,
     jellyfinId: item.Id,
-    title: item.Name,
+    title: cleanJellyfinTitle(item.Name),
     year: item.ProductionYear || "Movie",
     genre: item.Genres?.[0] || "Unsorted",
     runtime: ticksToRuntime(item.RunTimeTicks),
-    theme: index % 6,
+    theme: posterTheme(item.Name),
     source: "jellyfin",
     progress: item.UserData?.PlayedPercentage ? Math.round(item.UserData.PlayedPercentage) : 0,
-    image: item.ImageTags?.Primary ? `${baseUrl}/Items/${item.Id}/Images/Primary?maxWidth=600&quality=88&tag=${encodeURIComponent(item.ImageTags.Primary)}&ApiKey=${encodeURIComponent(token)}` : "",
+    image: item.ImageTags?.Primary && Number(item.PrimaryImageAspectRatio) > 0 && Number(item.PrimaryImageAspectRatio) < 0.86
+      ? `${baseUrl}/Items/${item.Id}/Images/Primary?maxWidth=600&quality=88&tag=${encodeURIComponent(item.ImageTags.Primary)}&ApiKey=${encodeURIComponent(token)}`
+      : "",
     videoUrl: `${baseUrl}/Videos/${item.Id}/stream?Static=true&ApiKey=${encodeURIComponent(token)}`
   }));
   state.movies = [...jellyfinMovies, ...state.movies.filter(movie => movie.source !== "jellyfin")];
