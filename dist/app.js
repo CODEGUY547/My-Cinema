@@ -6,8 +6,11 @@ const state = {
   favorites: new Set(JSON.parse(localStorage.getItem("my-cinema-favorites") || "[]")),
   currentMovie: null,
   jellyfin: null,
+  guestToken: sessionStorage.getItem("my-cinema-guest-token") || "",
   objectUrls: []
 };
+
+const guestGateway = "https://mahad.tailf99850.ts.net";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -15,6 +18,7 @@ const movieGrid = $("#movieGrid");
 const continueGrid = $("#continueGrid");
 const emptyState = $("#emptyState");
 const settingsDialog = $("#settingsDialog");
+const accessDialog = $("#accessDialog");
 const playerDialog = $("#playerDialog");
 const videoPlayer = $("#videoPlayer");
 const tmdbStatus = $("#tmdbStatus");
@@ -29,6 +33,75 @@ function showToast(message) {
   toast.classList.add("show");
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => toast.classList.remove("show"), 2600);
+}
+
+function openAccess() {
+  accessDialog.hidden = false;
+  document.body.style.overflow = "hidden";
+  $("#accessPin").focus();
+}
+
+function closeAccess() {
+  accessDialog.hidden = true;
+  document.body.style.overflow = "";
+}
+
+async function loadGuestLibrary() {
+  const response = await fetch(`${guestGateway}/library`, {
+    headers: { Authorization: `Bearer ${state.guestToken}` },
+    cache: "no-store"
+  });
+  if (response.status === 401) {
+    state.guestToken = "";
+    sessionStorage.removeItem("my-cinema-guest-token");
+    openAccess();
+    throw new Error("Your access session expired. Enter the PIN again.");
+  }
+  if (!response.ok) throw new Error("The movie library is temporarily unavailable.");
+  const data = await response.json();
+  const movies = (data.movies || []).map(movie => ({
+    ...movie,
+    title: cleanJellyfinTitle(movie.title),
+    genre: movie.genre || "Unsorted",
+    theme: posterTheme(movie.title),
+    source: "guest"
+  }));
+  state.movies = [...movies, ...state.movies.filter(movie => !["guest", "jellyfin"].includes(movie.source))];
+  state.view = "library";
+  renderContinue();
+  updateView();
+  enrichJellyfinMovies(movies).catch(() => {
+    tmdbStatus.textContent = "TMDB temporarily unavailable";
+  });
+}
+
+async function unlockGuest(event) {
+  event.preventDefault();
+  const status = $("#accessStatus");
+  const button = $("#accessButton");
+  status.textContent = "";
+  button.disabled = true;
+  button.textContent = "Unlocking…";
+  try {
+    const response = await fetch(`${guestGateway}/access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: $("#accessPin").value })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "The PIN was not accepted.");
+    state.guestToken = data.token;
+    sessionStorage.setItem("my-cinema-guest-token", data.token);
+    $("#accessPin").value = "";
+    await loadGuestLibrary();
+    closeAccess();
+    showToast("Cinema unlocked for this session");
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Unlock cinema";
+  }
 }
 
 function cleanJellyfinTitle(title = "") {
@@ -164,7 +237,7 @@ function saveFavorites() {
 function openPlayer(movie) {
   state.currentMovie = movie;
   $("#playerTitle").textContent = movie.title;
-  $("#playerSource").textContent = movie.source === "jellyfin" ? "JELLYFIN LIBRARY" : movie.source === "local" ? "LOCAL FILE" : "DEMO TITLE";
+  $("#playerSource").textContent = movie.source === "guest" ? "MY CINEMA" : movie.source === "jellyfin" ? "JELLYFIN LIBRARY" : "LOCAL FILE";
   if (!movie.videoUrl) {
     showToast("Add a local file or connect Jellyfin to play a movie");
     return;
@@ -364,9 +437,11 @@ function closeSettings() {
   settingsDialog.hidden = true;
   document.body.style.overflow = "";
 }
-$("#settingsButton").addEventListener("click", openSettings);
-$("#avatarButton").addEventListener("click", openSettings);
-$("#heroConnectButton").addEventListener("click", openSettings);
+$("#settingsButton").addEventListener("click", openAccess);
+$("#avatarButton").addEventListener("click", openAccess);
+$("#heroConnectButton").addEventListener("click", openAccess);
+$("#accessForm").addEventListener("submit", unlockGuest);
+$("#accessClose").addEventListener("click", closeAccess);
 $("#settingsClose").addEventListener("click", closeSettings);
 $("#mobileMenu").addEventListener("click", () => $(".sidebar").classList.toggle("open"));
 $("#jellyfinForm").addEventListener("submit", connectJellyfin);
@@ -374,6 +449,7 @@ $("#disconnectButton").addEventListener("click", disconnectJellyfin);
 $("#playerClose").addEventListener("click", closePlayer);
 playerDialog.addEventListener("click", event => { if (event.target === playerDialog) closePlayer(); });
 settingsDialog.addEventListener("click", event => { if (event.target === settingsDialog) closeSettings(); });
+accessDialog.addEventListener("click", event => { if (event.target === accessDialog) closeAccess(); });
 window.addEventListener("beforeunload", () => state.objectUrls.forEach(URL.revokeObjectURL));
 
 try {
@@ -387,6 +463,13 @@ try {
 
 renderContinue();
 renderMovies();
+if (state.guestToken) {
+  loadGuestLibrary().catch(error => {
+    $("#accessStatus").textContent = error.message;
+  });
+} else {
+  openAccess();
+}
 tmdbIsReady().then(ready => {
   tmdbStatus.textContent = ready ? "TMDB connected" : "TMDB setup needed";
   tmdbStatus.classList.toggle("connected", ready);

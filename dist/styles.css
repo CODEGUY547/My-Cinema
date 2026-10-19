@@ -127,6 +127,9 @@ main { min-width: 0; }
 .modal-layer { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 14px; color: var(--ink); background: rgba(0,0,0,.78); backdrop-filter: blur(9px); }
 .modal-layer[hidden] { display: none; }
 .dialog-card { width: min(600px, calc(100vw - 28px)); background: #12151b; border: 1px solid rgba(255,255,255,.12); border-radius: 22px; padding: 30px; box-shadow: 0 35px 100px #000; }
+.access-dialog .dialog-card { width: min(460px, calc(100vw - 28px)); }
+.access-dialog .dialog-actions { justify-content: flex-end; }
+.access-dialog .primary-button { min-width: 170px; }
 .dialog-top { display: flex; justify-content: space-between; gap: 20px; }
 .close-button, .player-close { border: 0; background: #252930; color: white; border-radius: 50%; width: 36px; height: 36px; font-size: 22px; }
 .dialog-copy { color: var(--muted); line-height: 1.55; }

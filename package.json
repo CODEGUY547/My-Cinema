@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "gateway": "node gateway.mjs",
+    "gateway:init": "node gateway.mjs --init"
   }
 }
