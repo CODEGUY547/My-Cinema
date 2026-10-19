@@ -32,7 +32,7 @@ The `dist` folder is the static site and `api/tmdb` contains the Vercel Function
 3. Add `TMDB_READ_ACCESS_TOKEN` as a Secret environment variable for Production and Preview.
 4. Deploy.
 
-For remote playback, connect the viewing device and the Jellyfin PC to the same Tailscale network. Use Tailscale Serve to give Jellyfin a private HTTPS address; do not expose port 8096 directly to the public internet.
+For remote playback, connect the viewing device and the Jellyfin PC to the same Tailscale network. Jellyfin is privately available at `https://mahad.tailf99850.ts.net`; do not expose port 8096 directly to the public internet.
 
 ## Jellyfin connection
 
