@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createHmac, randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 import { Readable } from "node:stream";
 import { resolve } from "node:path";
@@ -26,7 +26,7 @@ function createSecrets() {
     console.log("Gateway secrets already exist. Delete .gateway-secrets.json only if you intend to rotate the shared PIN.");
     return;
   }
-  const pin = String(randomInt(100000, 1000000));
+  const pin = String(randomInt(0, 10000)).padStart(4, "0");
   const pinSalt = randomBytes(16).toString("hex");
   const secrets = {
     version: 1,
@@ -40,8 +40,37 @@ function createSecrets() {
   console.log("Save this PIN somewhere private. It is stored only as a one-way hash.");
 }
 
+function setPin(pin) {
+  if (!/^\d{4}$/.test(pin || "")) {
+    console.error("The shared PIN must contain exactly four digits.");
+    process.exit(1);
+  }
+  if (!existsSync(secretsPath)) {
+    console.error("Gateway is not initialized. Run: npm run gateway:init");
+    process.exit(1);
+  }
+  const current = JSON.parse(readFileSync(secretsPath, "utf8"));
+  const pinSalt = randomBytes(16).toString("hex");
+  const updated = {
+    ...current,
+    pinSalt,
+    pinHash: scryptSync(pin, pinSalt, 32).toString("hex"),
+    pinUpdatedAt: new Date().toISOString()
+  };
+  const temporaryPath = `${secretsPath}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(updated, null, 2)}\n`, { mode: 0o600, flag: "w" });
+  renameSync(temporaryPath, secretsPath);
+  console.log("My Cinema shared PIN was updated.");
+}
+
 if (process.argv.includes("--init")) {
   createSecrets();
+  process.exit(0);
+}
+
+const setPinIndex = process.argv.indexOf("--set-pin");
+if (setPinIndex !== -1) {
+  setPin(process.argv[setPinIndex + 1]);
   process.exit(0);
 }
 

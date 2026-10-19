@@ -41,7 +41,9 @@ npm run gateway:init
 npm run gateway
 ```
 
-`gateway:init` prints a six-digit PIN once. The PIN hash and signing key are saved in the ignored `.gateway-secrets.json` file and must never be committed. Set `PUBLIC_GATEWAY_URL` and `CINEMA_PUBLIC_ORIGINS` in `.env.local`, then expose the gateway with Tailscale Funnel on local port `4180`.
+`gateway:init` prints a four-digit PIN once. The PIN hash and signing key are saved in the ignored `.gateway-secrets.json` file and must never be committed. Set `PUBLIC_GATEWAY_URL` and `CINEMA_PUBLIC_ORIGINS` in `.env.local`, then expose the gateway with Tailscale Funnel on local port `4180`.
+
+To rotate the PIN later, run `node gateway.mjs --set-pin <four-digit-pin>` and restart the gateway.
 
 The gateway rate-limits incorrect PIN attempts, grants 12-hour browser sessions, and issues short-lived signed URLs for posters and streams. Movie data remains on the Jellyfin PC.
 
