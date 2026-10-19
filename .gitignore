@@ -1,3 +1,6 @@
 .env.local
 .gateway-secrets.json
 personal-cinema-site-*.tar.gz
+
+.vercel
+.env*
