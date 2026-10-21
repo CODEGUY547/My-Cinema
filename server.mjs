@@ -75,6 +75,7 @@ function cleanMovie(movie) {
     title: movie.title || movie.original_title,
     originalTitle: movie.original_title || null,
     year: releaseYear,
+    releaseDate: movie.release_date || null,
     overview: movie.overview || "",
     genre: genreNames[0] || null,
     genres: genreNames,
@@ -83,6 +84,41 @@ function cleanMovie(movie) {
     backdrop: movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
     tmdbUrl: `https://www.themoviedb.org/movie/${movie.id}`
   };
+}
+
+async function upcomingMovies(region = "UG") {
+  const today = new Date();
+  const end = new Date(today);
+  end.setUTCDate(end.getUTCDate() + 365);
+  const isoDate = value => value.toISOString().slice(0, 10);
+  const discovery = await tmdbRequest("/discover/movie", {
+    region,
+    include_adult: "false",
+    include_video: "false",
+    "release_date.gte": isoDate(today),
+    "release_date.lte": isoDate(end),
+    with_release_type: "3|2",
+    sort_by: "popularity.desc",
+    page: 1
+  });
+  const inWindow = movie => movie.release_date >= isoDate(today) && movie.release_date <= isoDate(end);
+  let results = (discovery.results || []).filter(inWindow);
+  if (results.length < 10) {
+    const broader = await tmdbRequest("/discover/movie", {
+      include_adult: "false",
+      include_video: "false",
+      "primary_release_date.gte": isoDate(today),
+      "primary_release_date.lte": isoDate(end),
+      with_release_type: "3|2",
+      sort_by: "popularity.desc",
+      page: 1
+    });
+    results = [...results, ...(broader.results || [])];
+  }
+  return [...new Map(results.filter(inWindow).map(movie => [movie.id, movie])).values()]
+    .sort((a, b) => a.release_date.localeCompare(b.release_date) || (b.popularity || 0) - (a.popularity || 0))
+    .slice(0, 18)
+    .map(cleanMovie);
 }
 
 async function tmdbRequest(pathname, params = {}) {
@@ -127,9 +163,14 @@ async function handleApi(response, url) {
   if (url.pathname === "/api/tmdb/status") {
     return sendJson(response, 200, { enabled: Boolean(tmdbToken) });
   }
-  if (url.pathname !== "/api/tmdb/movie") return sendJson(response, 404, { error: "Not found" });
   if (!tmdbToken) return sendJson(response, 503, { error: "TMDb is not configured" });
   try {
+    if (url.pathname === "/api/tmdb/upcoming") {
+      const requestedRegion = url.searchParams.get("region")?.toUpperCase() || "UG";
+      const region = /^[A-Z]{2}$/.test(requestedRegion) ? requestedRegion : "UG";
+      return sendJson(response, 200, { region, movies: await upcomingMovies(region) });
+    }
+    if (url.pathname !== "/api/tmdb/movie") return sendJson(response, 404, { error: "Not found" });
     const movie = await findMovie(url.searchParams);
     if (!movie) return sendJson(response, 404, { error: "No matching movie found" });
     return sendJson(response, 200, movie);

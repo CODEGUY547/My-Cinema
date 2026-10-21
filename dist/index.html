@@ -10,75 +10,86 @@
 </head>
 <body>
   <div class="shell">
-    <aside class="sidebar" aria-label="Main navigation">
+    <header class="sidebar" aria-label="Main navigation">
       <a class="brand" href="#" aria-label="My Cinema home">
-        <span class="brand-mark" aria-hidden="true">M</span>
-        <span>MY CINEMA</span>
+        <span class="brand-mark" aria-hidden="true">MC</span>
+        <span>MY <b>CINEMA</b></span>
       </a>
 
       <nav class="nav-list">
-        <button class="nav-item active" data-view="home"><span aria-hidden="true">⌂</span> Home</button>
-        <button class="nav-item" data-view="library"><span aria-hidden="true">▦</span> My library</button>
-        <button class="nav-item" data-view="favorites"><span aria-hidden="true">♡</span> Favorites</button>
+        <button class="nav-item active" data-view="home">Home</button>
+        <button class="nav-item" data-view="library">Movies</button>
+        <button class="nav-item" data-view="favorites">My list</button>
       </nav>
 
       <div class="sidebar-bottom">
-        <button class="nav-item" id="settingsButton"><span aria-hidden="true">⚙</span> Jellyfin</button>
-        <div class="privacy-pill"><span></span> Private library</div>
+        <div class="privacy-pill"><span></span> Private cinema</div>
+        <button class="avatar" id="avatarButton" aria-label="Enter access PIN">BM</button>
       </div>
-    </aside>
+    </header>
 
     <main>
       <header class="topbar">
-        <button class="mobile-menu" id="mobileMenu" aria-label="Open navigation">☰</button>
+        <div class="browse-copy">
+          <span>Discover</span>
+          <strong>Your private collection</strong>
+        </div>
         <label class="search">
           <span aria-hidden="true">⌕</span>
-          <input id="searchInput" type="search" placeholder="Search your movies" autocomplete="off">
+          <input id="searchInput" type="search" placeholder="Search titles, genres or years" autocomplete="off">
         </label>
         <div class="top-actions">
-          <button class="ghost-button" id="addFilesButton">＋ Add local movies</button>
+          <button class="ghost-button" id="addFilesButton">＋ Add movie</button>
           <input id="fileInput" type="file" accept="video/*" multiple hidden>
-          <button class="avatar" id="avatarButton" aria-label="Open Jellyfin settings">BM</button>
         </div>
       </header>
 
-      <section class="hero" aria-labelledby="heroTitle">
-        <div class="hero-noise"></div>
+      <section class="hero" id="featuredHero" aria-labelledby="heroTitle">
+        <div class="hero-backdrop" id="heroBackdrop"></div>
+        <div class="hero-scrim"></div>
         <div class="hero-content">
-          <p class="eyebrow">YOUR PRIVATE SCREENING ROOM</p>
-          <h1 id="heroTitle">Your movies.<br><em>Your space.</em></h1>
-          <p>Bring your own licensed files or connect your Jellyfin server. Everything stays under your control.</p>
+          <p class="eyebrow" id="heroEyebrow">WELCOME TO YOUR PRIVATE CINEMA</p>
+          <h1 id="heroTitle">Great stories.<br><em>One private screen.</em></h1>
+          <div class="hero-meta" id="heroMeta"><span>Personal library</span><span>Secure access</span><span>Powered by Jellyfin</span></div>
+          <p id="heroDescription">Unlock your collection and start watching from any device. Your movies stay on your own server and under your control.</p>
           <div class="hero-actions">
-            <button class="primary-button" id="heroAddButton"><span aria-hidden="true">▶</span> Add your first movie</button>
-            <button class="secondary-button" id="heroConnectButton">Enter access PIN</button>
+            <button class="primary-button" id="heroPlayButton" hidden><span aria-hidden="true">▶</span> Play now</button>
+            <button class="primary-button" id="heroConnectButton"><span aria-hidden="true">⌁</span> Enter access PIN</button>
+            <button class="secondary-button" id="heroBrowseButton" hidden>Browse collection ↓</button>
           </div>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <div class="film-orbit orbit-one"></div>
-          <div class="film-orbit orbit-two"></div>
-          <div class="ticket">
-            <span>PRIVATE PREMIERE</span>
-            <strong>MY<br>CINEMA</strong>
-            <small>ADMIT ONE</small>
+        <div class="hero-art" id="heroArt" aria-hidden="true">
+          <div class="poster-stack poster-stack-back"></div>
+          <div class="hero-poster" id="heroPoster">
+            <span class="poster-monogram">M</span>
+            <small>MY CINEMA ORIGINAL</small>
+            <strong>YOUR NEXT<br>FAVOURITE</strong>
           </div>
         </div>
+      </section>
+
+      <section class="quick-strip" aria-label="Cinema highlights">
+        <div><span class="quick-icon">▶</span><p><strong>Instant play</strong><small>Stream from your own Jellyfin server</small></p></div>
+        <div><span class="quick-icon">✦</span><p><strong>Fresh artwork</strong><small>Movie details and posters from TMDB</small></p></div>
+        <div><span class="quick-icon">⌾</span><p><strong>Private access</strong><small>One shared PIN for trusted viewers</small></p></div>
       </section>
 
       <section class="content-section" id="continueSection">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">PICK UP WHERE YOU LEFT OFF</p>
+            <p class="section-kicker">KEEP WATCHING</p>
             <h2>Continue watching</h2>
           </div>
         </div>
         <div class="continue-grid" id="continueGrid"></div>
       </section>
 
-      <section class="content-section">
+      <section class="content-section" id="librarySection">
         <div class="section-heading">
           <div>
-            <p class="section-kicker" id="libraryKicker">CURATED FOR YOU</p>
-            <h2 id="libraryTitle">Your library</h2>
+            <p class="section-kicker" id="libraryKicker">NOW SHOWING</p>
+            <h2 id="libraryTitle">Movies for you</h2>
+            <p class="library-count" id="libraryCount">Unlock your cinema to see the collection</p>
           </div>
           <div class="filter-row" role="group" aria-label="Filter movies">
             <button class="filter active" data-filter="all">All</button>
@@ -93,6 +104,19 @@
           <h3>No movies found</h3>
           <p>Try another search, add local video files, or connect Jellyfin.</p>
         </div>
+      </section>
+
+      <section class="content-section upcoming-section" id="upcomingSection" aria-labelledby="upcomingTitle">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">TMDB RELEASE CALENDAR</p>
+            <h2 id="upcomingTitle">Coming soon to cinemas</h2>
+            <p class="library-count" id="upcomingStatus">Loading upcoming theatrical releases…</p>
+          </div>
+          <div class="calendar-months" id="calendarMonths" aria-label="Release month filters"></div>
+        </div>
+        <div class="upcoming-grid" id="upcomingGrid"></div>
+        <p class="release-note">Dates are theatrical release dates supplied by TMDB and may change. They do not indicate when a title will be added to your private library.</p>
       </section>
 
       <footer class="tmdb-credit" aria-label="Movie metadata credits">

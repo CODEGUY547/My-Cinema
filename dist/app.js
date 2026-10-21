@@ -7,7 +7,9 @@ const state = {
   currentMovie: null,
   jellyfin: null,
   guestToken: sessionStorage.getItem("my-cinema-guest-token") || "",
-  objectUrls: []
+  objectUrls: [],
+  upcoming: [],
+  upcomingMonth: "all"
 };
 
 const guestGateway = "https://mahad.tailf99850.ts.net";
@@ -22,6 +24,7 @@ const accessDialog = $("#accessDialog");
 const playerDialog = $("#playerDialog");
 const videoPlayer = $("#videoPlayer");
 const tmdbStatus = $("#tmdbStatus");
+const filterRow = $(".filter-row");
 
 function escapeHtml(value = "") {
   return value.replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
@@ -68,7 +71,9 @@ async function loadGuestLibrary() {
   }));
   state.movies = [...movies, ...state.movies.filter(movie => !["guest", "jellyfin"].includes(movie.source))];
   state.view = "library";
+  renderGenreFilters();
   renderContinue();
+  updateHero();
   updateView();
   enrichJellyfinMovies(movies).catch(() => {
     tmdbStatus.textContent = "TMDB temporarily unavailable";
@@ -168,6 +173,8 @@ async function enrichJellyfinMovies(movies) {
     updatedCount += enriched.filter(movie => movie.metadataSource === "tmdb").length;
     state.movies = state.movies.map(movie => byId.get(movie.id) || movie);
     renderContinue();
+    renderGenreFilters();
+    updateHero();
     renderMovies();
   }
   tmdbStatus.textContent = `TMDB updated ${updatedCount} movie${updatedCount === 1 ? "" : "s"}`;
@@ -182,10 +189,107 @@ function posterMarkup(movie, index) {
   </div>`;
 }
 
+function featuredMovie() {
+  return state.movies.find(movie => movie.backdrop) || state.movies.find(movie => movie.image) || state.movies[0] || null;
+}
+
+function safeMediaUrl(value = "") {
+  return /^(https?:|blob:)/i.test(value) ? value.replace(/["'\n\r\\]/g, "") : "";
+}
+
+function updateHero() {
+  const movie = featuredMovie();
+  const backdrop = $("#heroBackdrop");
+  const poster = $("#heroPoster");
+  const playButton = $("#heroPlayButton");
+  const connectButton = $("#heroConnectButton");
+  const browseButton = $("#heroBrowseButton");
+  if (!movie) {
+    $("#heroEyebrow").textContent = "WELCOME TO YOUR PRIVATE CINEMA";
+    $("#heroTitle").innerHTML = "Great stories.<br><em>One private screen.</em>";
+    $("#heroMeta").innerHTML = "<span>Personal library</span><span>Secure access</span><span>Powered by Jellyfin</span>";
+    $("#heroDescription").textContent = "Unlock your collection and start watching from any device. Your movies stay on your own server and under your control.";
+    playButton.hidden = true;
+    browseButton.hidden = true;
+    connectButton.hidden = false;
+    backdrop.style.backgroundImage = "";
+    poster.style.backgroundImage = "";
+    return;
+  }
+  const cover = safeMediaUrl(movie.backdrop || movie.image);
+  const posterImage = safeMediaUrl(movie.image);
+  $("#heroEyebrow").textContent = "FEATURED IN YOUR CINEMA";
+  $("#heroTitle").textContent = movie.title;
+  $("#heroMeta").innerHTML = [movie.year, movie.genre, movie.runtime, movie.rating ? `★ ${movie.rating}` : ""]
+    .filter(Boolean).map(value => `<span>${escapeHtml(String(value))}</span>`).join("");
+  $("#heroDescription").textContent = movie.overview || "A featured title from your private movie collection, ready to watch whenever you are.";
+  playButton.dataset.play = movie.id;
+  playButton.hidden = false;
+  browseButton.hidden = false;
+  connectButton.hidden = true;
+  backdrop.style.backgroundImage = cover ? `url("${cover}")` : "";
+  poster.style.backgroundImage = posterImage ? `url("${posterImage}")` : "";
+  poster.innerHTML = `<span class="poster-monogram">${posterImage ? "" : escapeHtml(movie.title.charAt(0))}</span><small>FEATURED PRESENTATION</small><strong>${escapeHtml(movie.title)}</strong>`;
+}
+
+function renderGenreFilters() {
+  const genres = [...new Set(state.movies.flatMap(movie => movie.genres?.length ? movie.genres : [movie.genre]).filter(Boolean))].slice(0, 5);
+  if (state.filter !== "all" && !genres.includes(state.filter)) state.filter = "all";
+  filterRow.innerHTML = ["all", ...genres].map(genre => `<button class="filter ${state.filter === genre ? "active" : ""}" data-filter="${escapeHtml(genre)}">${genre === "all" ? "All" : escapeHtml(genre)}</button>`).join("");
+}
+
+function releaseDate(value) {
+  return value ? new Date(`${value}T12:00:00`) : null;
+}
+
+function daysToRelease(value) {
+  const date = releaseDate(value);
+  if (!date) return "Date to be announced";
+  const days = Math.ceil((date - new Date()) / 86400000);
+  if (days < 0) return "Now in cinemas";
+  if (days === 0) return "Releases today";
+  if (days === 1) return "Tomorrow";
+  return `${days} days to release`;
+}
+
+function renderUpcoming() {
+  const months = [...new Set(state.upcoming.map(movie => movie.releaseDate?.slice(0, 7)).filter(Boolean))];
+  if (state.upcomingMonth !== "all" && !months.includes(state.upcomingMonth)) state.upcomingMonth = "all";
+  $("#calendarMonths").innerHTML = ["all", ...months].map(month => {
+    const label = month === "all" ? "All dates" : new Intl.DateTimeFormat("en-UG", { month: "short", year: "numeric" }).format(releaseDate(`${month}-01`));
+    return `<button class="month-filter ${state.upcomingMonth === month ? "active" : ""}" data-month="${month}">${escapeHtml(label)}</button>`;
+  }).join("");
+  const movies = state.upcoming.filter(movie => state.upcomingMonth === "all" || movie.releaseDate?.startsWith(state.upcomingMonth));
+  $("#upcomingGrid").innerHTML = movies.length ? movies.map((movie, index) => {
+    const date = releaseDate(movie.releaseDate);
+    const day = date ? String(date.getDate()).padStart(2, "0") : "--";
+    const month = date ? new Intl.DateTimeFormat("en-UG", { month: "short" }).format(date).toUpperCase() : "TBA";
+    const artwork = movie.poster ? `<img src="${escapeHtml(movie.poster)}" alt="" loading="lazy">` : `<div class="poster-art theme-${index % 6}" data-letter="${escapeHtml(movie.title.charAt(0))}"></div>`;
+    return `<a class="upcoming-card" href="${escapeHtml(movie.tmdbUrl)}" target="_blank" rel="noreferrer" aria-label="View ${escapeHtml(movie.title)} on TMDB">
+      <div class="upcoming-poster">${artwork}<time class="release-date" datetime="${escapeHtml(movie.releaseDate || "")}"><b>${day}</b><span>${month}</span></time></div>
+      <div class="upcoming-copy"><h3 title="${escapeHtml(movie.title)}">${escapeHtml(movie.title)}</h3><p>${escapeHtml(movie.genre || "Movie")} · ${escapeHtml(String(movie.year || "Coming soon"))}${movie.rating ? ` · ★ ${escapeHtml(String(movie.rating))}` : ""}</p><p class="countdown">${escapeHtml(daysToRelease(movie.releaseDate))}</p></div>
+    </a>`;
+  }).join("") : `<div class="upcoming-empty">No releases are listed for this month yet.</div>`;
+  $("#upcomingStatus").textContent = `${state.upcoming.length} upcoming theatrical release${state.upcoming.length === 1 ? "" : "s"} from TMDB`;
+}
+
+async function loadUpcoming() {
+  try {
+    const response = await fetch("/api/tmdb/upcoming?region=UG", { cache: "no-store" });
+    if (!response.ok) throw new Error("Upcoming releases are unavailable");
+    const data = await response.json();
+    state.upcoming = data.movies || [];
+    renderUpcoming();
+  } catch {
+    $("#upcomingStatus").textContent = "Upcoming releases are temporarily unavailable.";
+    $("#upcomingGrid").innerHTML = `<div class="upcoming-empty">The release calendar could not be loaded. Please try again later.</div>`;
+  }
+}
+
 function filteredMovies() {
   return state.movies.filter(movie => {
     const matchesView = state.view !== "favorites" || state.favorites.has(movie.id);
-    const matchesGenre = state.filter === "all" || movie.genre === state.filter;
+    const matchesGenre = state.filter === "all" || movie.genre === state.filter || movie.genres?.includes(state.filter);
     const haystack = `${movie.title} ${movie.genre} ${movie.year}`.toLowerCase();
     return matchesView && matchesGenre && haystack.includes(state.query.toLowerCase());
   });
@@ -199,6 +303,7 @@ function renderMovies() {
         ${posterMarkup(movie, index)}
         <button class="favorite-button ${state.favorites.has(movie.id) ? "active" : ""}" data-favorite="${movie.id}" aria-label="${state.favorites.has(movie.id) ? "Remove from" : "Add to"} favorites">${state.favorites.has(movie.id) ? "♥" : "♡"}</button>
         <button class="play-button" data-play="${movie.id}" aria-label="Play ${escapeHtml(movie.title)}">▶</button>
+        <span class="quality-badge">HD</span>
       </div>
       <div class="movie-info">
         <h3 title="${escapeHtml(movie.title)}">${escapeHtml(movie.title)}</h3>
@@ -207,6 +312,7 @@ function renderMovies() {
       </div>
     </article>`).join("");
   emptyState.hidden = movies.length > 0;
+  $("#libraryCount").textContent = `${movies.length} movie${movies.length === 1 ? "" : "s"}${state.view === "favorites" ? " saved to your list" : " ready to watch"}`;
 }
 
 function renderContinue() {
@@ -225,9 +331,10 @@ function renderContinue() {
 
 function updateView() {
   $$(".nav-item[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === state.view));
-  $("#libraryTitle").textContent = state.view === "favorites" ? "Your favorites" : "Your library";
-  $("#libraryKicker").textContent = state.view === "favorites" ? "SAVED FOR LATER" : "CURATED FOR YOU";
-  if (state.view !== "home") document.querySelector(".content-section:last-of-type").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("#libraryTitle").textContent = state.view === "favorites" ? "Saved for later" : "Movies for you";
+  $("#libraryKicker").textContent = state.view === "favorites" ? "MY LIST" : "NOW SHOWING";
+  if (state.view === "home") $("#featuredHero").scrollIntoView({ behavior: "smooth", block: "start" });
+  else $("#librarySection").scrollIntoView({ behavior: "smooth", block: "start" });
   renderMovies();
 }
 
@@ -276,6 +383,8 @@ function addLocalFiles(files) {
   });
   state.movies = [...added, ...state.movies];
   state.view = "library";
+  renderGenreFilters();
+  updateHero();
   updateView();
   showToast(`${added.length} local movie${added.length === 1 ? "" : "s"} added for this session`);
 }
@@ -382,7 +491,9 @@ async function loadJellyfinLibrary() {
   }));
   state.movies = [...jellyfinMovies, ...state.movies.filter(movie => movie.source !== "jellyfin")];
   state.view = "library";
+  renderGenreFilters();
   renderContinue();
+  updateHero();
   updateView();
   enrichJellyfinMovies(jellyfinMovies).catch(() => {
     tmdbStatus.textContent = "TMDB temporarily unavailable";
@@ -394,7 +505,9 @@ function disconnectJellyfin() {
   sessionStorage.removeItem("my-cinema-jellyfin");
   state.movies = state.movies.filter(movie => movie.source !== "jellyfin");
   $("#connectionStatus").textContent = "Disconnected.";
+  renderGenreFilters();
   renderContinue();
+  updateHero();
   renderMovies();
 }
 
@@ -420,14 +533,21 @@ $$(".nav-item[data-view]").forEach(button => button.addEventListener("click", ()
   $(".sidebar").classList.remove("open");
   updateView();
 }));
-$$(".filter").forEach(button => button.addEventListener("click", () => {
+filterRow.addEventListener("click", event => {
+  const button = event.target.closest("[data-filter]");
+  if (!button) return;
   state.filter = button.dataset.filter;
-  $$(".filter").forEach(item => item.classList.toggle("active", item === button));
+  renderGenreFilters();
   renderMovies();
-}));
+});
+$("#calendarMonths").addEventListener("click", event => {
+  const button = event.target.closest("[data-month]");
+  if (!button) return;
+  state.upcomingMonth = button.dataset.month;
+  renderUpcoming();
+});
 $("#searchInput").addEventListener("input", event => { state.query = event.target.value; renderMovies(); });
 $("#addFilesButton").addEventListener("click", () => $("#fileInput").click());
-$("#heroAddButton").addEventListener("click", () => $("#fileInput").click());
 $("#fileInput").addEventListener("change", event => addLocalFiles(event.target.files));
 function openSettings() {
   settingsDialog.hidden = false;
@@ -438,13 +558,12 @@ function closeSettings() {
   settingsDialog.hidden = true;
   document.body.style.overflow = "";
 }
-$("#settingsButton").addEventListener("click", openAccess);
 $("#avatarButton").addEventListener("click", openAccess);
 $("#heroConnectButton").addEventListener("click", openAccess);
+$("#heroBrowseButton").addEventListener("click", () => $("#librarySection").scrollIntoView({ behavior: "smooth" }));
 $("#accessForm").addEventListener("submit", unlockGuest);
 $("#accessClose").addEventListener("click", closeAccess);
 $("#settingsClose").addEventListener("click", closeSettings);
-$("#mobileMenu").addEventListener("click", () => $(".sidebar").classList.toggle("open"));
 $("#jellyfinForm").addEventListener("submit", connectJellyfin);
 $("#disconnectButton").addEventListener("click", disconnectJellyfin);
 $("#playerClose").addEventListener("click", closePlayer);
@@ -462,7 +581,9 @@ try {
   }
 } catch {}
 
+renderGenreFilters();
 renderContinue();
+updateHero();
 renderMovies();
 if (state.guestToken) {
   loadGuestLibrary().catch(error => {
@@ -474,4 +595,6 @@ if (state.guestToken) {
 tmdbIsReady().then(ready => {
   tmdbStatus.textContent = ready ? "TMDB connected" : "TMDB setup needed";
   tmdbStatus.classList.toggle("connected", ready);
+  if (ready) loadUpcoming();
+  else $("#upcomingStatus").textContent = "Connect TMDB to load the release calendar.";
 });
