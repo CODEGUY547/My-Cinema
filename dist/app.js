@@ -278,7 +278,9 @@ async function loadUpcoming() {
     const response = await fetch("/api/tmdb/upcoming?region=UG", { cache: "no-store" });
     if (!response.ok) throw new Error("Upcoming releases are unavailable");
     const data = await response.json();
-    state.upcoming = data.movies || [];
+    const now = new Date();
+    const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+    state.upcoming = (data.movies || []).filter(movie => !movie.releaseDate || movie.releaseDate >= today);
     renderUpcoming();
   } catch {
     $("#upcomingStatus").textContent = "Upcoming releases are temporarily unavailable.";
