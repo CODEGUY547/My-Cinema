@@ -84,7 +84,7 @@ const secrets = JSON.parse(readFileSync(secretsPath, "utf8"));
 const publicBase = (process.env.PUBLIC_GATEWAY_URL || "https://mahad.tailf99850.ts.net").replace(/\/+$/, "");
 const guestUsername = process.env.JELLYFIN_GUEST_USERNAME || "Friends";
 const guestPassword = process.env.JELLYFIN_GUEST_PASSWORD || "";
-const allowedOrigins = new Set((process.env.CINEMA_PUBLIC_ORIGINS || "https://my-cinema-mu.vercel.app,http://localhost:4173").split(",").map(value => value.trim()).filter(Boolean));
+const allowedOrigins = new Set((process.env.CINEMA_PUBLIC_ORIGINS || "https://my-cinema-mu.vercel.app,https://my-cinema-vault.icebade9.chatgpt.site,http://localhost:4173").split(",").map(value => value.trim()).filter(Boolean));
 
 function corsHeaders(request) {
   const origin = request.headers.origin;

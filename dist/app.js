@@ -108,7 +108,8 @@ function cleanJellyfinTitle(title = "") {
   return title
     .replace(/\[(?:https?:\/\/)?(?:www\.)?[^\]]+\]/gi, "")
     .replace(/[._]+/g, " ")
-    .replace(/\s+(?:VJ\s+)?Junior\s*$/i, "")
+    .replace(/\s+VJ(?:\s+[\p{L}\p{M}\d'’-]+){1,3}\s*$/iu, "")
+    .replace(/\s+Junior\s*$/i, "")
     .replace(/\s+/g, " ")
     .trim() || "Untitled movie";
 }
